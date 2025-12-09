@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.git/
+.gitignore
+.idea/
+.vscode/
+venv/
+.venv/
+output/
+*.xlsx
+*.log
+.env
+.env.local
+README.md
+.cache/
+

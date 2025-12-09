@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  parser:
+    build: .
+    container_name: wb-parser
+    volumes:
+      - ./output:/app/output
+    command: >
+      -q "пальто из натуральной шерсти"
+      -p 10
+      -o /app/output
+      --min-rating 4.5
+      --max-price 10000
+      --country Россия
+
