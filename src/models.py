@@ -1,12 +1,9 @@
-"""Модели данных."""
-
 import re
 from dataclasses import dataclass, field
 
 
 @dataclass
 class Product:
-    """Товар WB."""
     
     url: str
     article: int
@@ -42,35 +39,26 @@ class Product:
     
     @property
     def description_clean(self):
-        """Убираем HTML теги из описания."""
         if not self.description:
             return ""
-        # удаляем все теги
         text = re.sub(r'<[^>]+>', ' ', self.description)
-        # заменяем HTML-сущности
         text = text.replace('&nbsp;', ' ')
         text = text.replace('&amp;', '&')
         text = text.replace('&lt;', '<')
         text = text.replace('&gt;', '>')
-        # убираем лишние пробелы
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
     
     def matches_filter(self, min_rating=4.5, max_price=10000, country="Россия"):
-        """Проверка фильтра."""
-        # если страна не указана - не подходит
         if not self.country:
             return False
         
-        # проверяем рейтинг
         if self.rating < min_rating:
             return False
         
-        # проверяем цену
         if self.price_rub > max_price:
             return False
         
-        # проверяем страну (регистронезависимо)
         country_match = country.lower() in self.country.lower()
         if not country_match:
             return False

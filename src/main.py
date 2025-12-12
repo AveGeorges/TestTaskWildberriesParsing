@@ -1,5 +1,3 @@
-"""Парсер каталога Wildberries."""
-
 import argparse
 import logging
 import sys
@@ -29,23 +27,16 @@ def parse_args():
                         help="Кол-во страниц")
     parser.add_argument("-o", "--output", default="output",
                         help="Папка для результатов")
-    parser.add_argument("-w", "--workers", type=int, default=5,
-                        help="Потоки (для httpx режима)")
     
     parser.add_argument("--no-enrich", action="store_true",
                         help="Без обогащения данных")
-    parser.add_argument("--no-parallel", action="store_true",
-                        help="Без многопоточности")
     parser.add_argument("--no-cache", action="store_true",
                         help="Без кэша")
     parser.add_argument("--clear-cache", action="store_true",
                         help="Очистить кэш")
     
-    parser.add_argument("--browser", action="store_true",
-                        help="Режим браузера (Playwright)")
     parser.add_argument("--show-browser", action="store_true",
                         help="Показать окно браузера")
-    parser.add_argument("--proxy", help="Прокси (http://...)")
     
     parser.add_argument("-v", "--verbose", action="store_true")
     
@@ -73,14 +64,7 @@ def main():
     logger.info(f"Страниц: {args.pages}")
     logger.info(f"Кэш: {'нет' if args.no_cache else 'да'}")
     logger.info(f"Обогащение: {'нет' if args.no_enrich else 'да'}")
-    
-    if args.browser:
-        logger.info(f"Режим: браузер")
-        logger.info(f"Headless: {'нет' if args.show_browser else 'да'}")
-    else:
-        logger.info(f"Режим: HTTP")
-        if args.proxy:
-            logger.info(f"Прокси: {args.proxy[:30]}...")
+    logger.info(f"Headless: {'нет' if args.show_browser else 'да'}")
     logger.info("=" * 60)
     
     out_dir = Path(args.output)
@@ -91,39 +75,21 @@ def main():
     filtered_path = out_dir / f"catalog_filtered_{ts}.xlsx"
     
     try:
-        # выбираем парсер в зависимости от режима
-        if args.browser:
-            from src.wb_browser import WBBrowserParser
-            parser = WBBrowserParser(
-                use_cache=not args.no_cache,
-                headless=not args.show_browser,
-            )
-        else:
-            # HTTP режим (может блокироваться)
-            from src.wb_parser import WildberriesParser
-            parser = WildberriesParser(
-                use_cache=not args.no_cache,
-                max_workers=args.workers,
-                proxy=args.proxy,
-            )
+        from src.wb_browser import WBBrowserParser
+        parser = WBBrowserParser(
+            use_cache=not args.no_cache,
+            headless=not args.show_browser,
+        )
         
         with parser:
             logger.info("Парсинг...")
             start = datetime.now()
             
-            if args.browser:
-                products = parser.parse(
-                    args.query,
-                    max_pages=args.pages,
-                    enrich=not args.no_enrich,
-                )
-            else:
-                products = parser.parse_all(
-                    args.query,
-                    max_pages=args.pages,
-                    enrich=not args.no_enrich,
-                    parallel=not args.no_parallel,
-                )
+            products = parser.parse(
+                args.query,
+                max_pages=args.pages,
+                enrich=not args.no_enrich,
+            )
             
             elapsed = datetime.now() - start
             logger.info(f"Время: {elapsed}")

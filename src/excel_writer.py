@@ -1,5 +1,3 @@
-"""Экспорт в Excel."""
-
 import logging
 from pathlib import Path
 
@@ -30,7 +28,6 @@ COLUMNS = [
 
 
 def _style_header(ws):
-    """Стилизуем заголовки."""
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     border = Border(
@@ -38,7 +35,6 @@ def _style_header(ws):
         top=Side(style="thin"), bottom=Side(style="thin")
     )
     
-    # применяем стили к каждой колонке
     col_num = 1
     for col_info in COLUMNS:
         name = col_info[0]
@@ -53,7 +49,6 @@ def _style_header(ws):
 
 
 def _write_row(ws, row, product):
-    """Пишем строку товара."""
     border = Border(
         left=Side(style="thin"), right=Side(style="thin"),
         top=Side(style="thin"), bottom=Side(style="thin")
@@ -67,7 +62,6 @@ def _write_row(ws, row, product):
 
 
 def save_xlsx(products, filepath, sheet_name="Товары"):
-    """Сохраняем товары в xlsx."""
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
     
@@ -88,7 +82,6 @@ def save_xlsx(products, filepath, sheet_name="Товары"):
 
 
 def save_filtered(products, filepath, filter_func):
-    """Сохраняем отфильтрованные товары."""
     filtered = [p for p in products if filter_func(p)]
     save_xlsx(filtered, filepath, "Отфильтрованные")
     return len(filtered)
