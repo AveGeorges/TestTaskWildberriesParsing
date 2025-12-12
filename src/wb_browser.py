@@ -1,3 +1,5 @@
+"""Парсер WB через Playwright браузер."""
+
 import logging
 import random
 import time
@@ -18,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class WBBrowserParser:
+    """Парсер через браузер - обходит блокировки."""
     
     def __init__(self, use_cache=True, headless=True):
         self.use_cache = use_cache
@@ -72,6 +75,7 @@ class WBBrowserParser:
         time.sleep(sec + random.uniform(-0.3, 0.5))
 
     def _get_basket(self, vol):
+        # TODO: может стоит вынести в конфиг, но пока работает так
         if vol <= 143:
             return "01"
         elif vol <= 287:
@@ -112,26 +116,31 @@ class WBBrowserParser:
         part = article // 1000
         basket = self._get_basket(vol)
         base = f"https://basket-{basket}.wbbasket.ru/vol{vol}/part{part}/{article}/images/big"
+        # генерим URL'ы, обычно их не больше 10, но на всякий случай
         images = []
         for i in range(1, count + 1):
             images.append(f"{base}/{i}.webp")
         return images
 
     def _parse_sizes(self, sizes_data):
+        """Парсим размеры и остатки."""
         total_stock = 0
         sizes = []
+        # иногда origName, иногда name - проверяем оба
         for s in sizes_data:
             name = s.get("origName") or s.get("name", "")
             if name and name not in sizes:
                 sizes.append(name)
+            # складываем остатки со всех складов
             stocks = s.get("stocks", [])
             if stocks:
                 for stock in stocks:
                     qty = stock.get("qty", 0)
-                    total_stock += qty
+                    total_stock += qty  # просто суммируем, работает
         return sizes, total_stock
 
     def _product_from_api(self, item):
+        """Создаём продукт из данных API."""
         article = item.get("id", 0)
         sizes_data = item.get("sizes", [])
         sizes, stock = self._parse_sizes(sizes_data)
@@ -158,6 +167,7 @@ class WBBrowserParser:
         )
 
     def _product_from_html(self, card):
+        """Парсим карточку из HTML."""
         try:
             article = int(card.get_attribute("data-nm-id") or 0)
             if not article:
@@ -195,6 +205,7 @@ class WBBrowserParser:
             return None
 
     def search(self, query, max_pages=None):
+        """Ищем товары."""
         pages = max_pages or MAX_PAGES
         products = []
         
@@ -202,13 +213,14 @@ class WBBrowserParser:
         self._page.goto("https://www.wildberries.ru/", wait_until="networkidle", timeout=60000)
         self._sleep(3)
         
+        # закрываем попапы если есть (иногда мешают)
         try:
             btn = self._page.query_selector("[class*='close']")
             if btn:
                 btn.click()
-                self._sleep(0.5)
+                self._sleep(0.5)  # на всякий случай ждём
         except Exception:
-            pass
+            pass  # если нет попапа - ок
         
         for page in range(1, pages + 1):
             logger.info(f"Страница {page}/{pages}...")
@@ -243,6 +255,7 @@ class WBBrowserParser:
             self._page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
             self._sleep(2)
             
+            # пробуем сначала API, если не сработало - HTML
             if "search" in self._api_data:
                 data = self._api_data["search"]
                 items = data.get("data", {}).get("products", [])
@@ -253,6 +266,7 @@ class WBBrowserParser:
                 for item in items:
                     products.append(self._product_from_api(item))
             else:
+                # fallback на HTML если API не перехватили
                 logger.info("API не перехвачен, парсим HTML")
                 cards = self._page.query_selector_all("article.product-card")
                 if not cards:
@@ -270,6 +284,7 @@ class WBBrowserParser:
         return products
 
     def get_detail(self, article):
+        """Получаем детали товара (размеры, продавец)."""
         key = get_cache_key("detail", article)
         if self.use_cache:
             cached = get_cached(key)
@@ -291,6 +306,7 @@ class WBBrowserParser:
         return {}
 
     def get_card(self, article):
+        """Получаем карточку (описание, характеристики)."""
         key = get_cache_key("card", article)
         if self.use_cache:
             cached = get_cached(key)
@@ -314,10 +330,13 @@ class WBBrowserParser:
         return {}
 
     def enrich(self, product):
+        """Дополняем продукт данными."""
+        # сначала детали (размеры, продавец)
         detail = self.get_detail(product.article)
         if detail:
             seller_id = detail.get("supplierId", 0)
             product.seller_name = detail.get("supplier", "")
+            # формируем ссылку на продавца
             if seller_id:
                 product.seller_url = SELLER_URL.format(seller_id=seller_id)
             else:
@@ -326,10 +345,12 @@ class WBBrowserParser:
             sizes_data = detail.get("sizes", [])
             product.sizes, product.stock = self._parse_sizes(sizes_data)
             
+            # если цены не было, берём из деталей
             if not product.price and sizes_data:
                 price_info = sizes_data[0].get("price", {})
                 product.price = price_info.get("product", 0)
             
+            # обновляем рейтинг и отзывы если есть
             new_rating = detail.get("reviewRating")
             if new_rating:
                 product.rating = new_rating
@@ -337,19 +358,23 @@ class WBBrowserParser:
             if new_feedbacks:
                 product.feedbacks_count = new_feedbacks
         
+        # потом карточка (описание, характеристики)
         card = self.get_card(product.article)
         if card:
             product.description = card.get("description", "")
             
+            # парсим характеристики
             options = card.get("options", [])
             for opt in options:
                 name = opt.get("name", "")
                 value = opt.get("value", "")
                 if name and value:
                     product.characteristics[name] = value
+                    # ищем страну в названии характеристики
                     if "страна" in name.lower():
                         product.country = value
             
+            # состав отдельно
             comps = card.get("compositions", [])
             if comps:
                 comp_parts = []
@@ -362,6 +387,7 @@ class WBBrowserParser:
         return product
 
     def parse(self, query, max_pages=None, enrich=True):
+        """Основной метод парсинга."""
         products = self.search(query, max_pages)
         logger.info(f"Найдено: {len(products)}")
         

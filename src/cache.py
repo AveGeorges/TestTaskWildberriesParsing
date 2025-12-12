@@ -1,3 +1,5 @@
+"""Простой файловый кэш для разработки."""
+
 import hashlib
 import json
 import logging
@@ -9,8 +11,10 @@ CACHE_DIR = Path(".cache")
 
 
 def _get_key(prefix, *args):
+    # делаем ключ из префикса и аргументов
     parts = [str(a) for a in args]
     data = f"{prefix}:{':'.join(parts)}"
+    # хешируем чтобы имя файла было нормальным
     return hashlib.md5(data.encode()).hexdigest()
 
 
