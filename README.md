@@ -17,27 +17,7 @@ python -m venv .venv
 pip install -r req.txt
 
 playwright install chromium
-
-cp .env.example .env
 ```
-
-Настройте переменные в файле `.env` при необходимости (по умолчанию используются значения из `.env.example`).
-
-## Переменные окружения
-
-Все настройки можно изменить через файл `.env`:
-
-| Переменная | Описание | По умолчанию |
-|------------|----------|--------------|
-| `DETAIL_API_URL` | URL API для деталей товара | `https://card.wb.ru/cards/v2/detail` |
-| `SELLER_URL` | Шаблон URL продавца | `https://www.wildberries.ru/seller/{seller_id}` |
-| `PRODUCT_URL` | Шаблон URL товара | `https://www.wildberries.ru/catalog/{article}/detail.aspx` |
-| `MAX_PAGES` | Максимальное количество страниц | `50` |
-| `DELAY_BETWEEN_PAGES` | Задержка между страницами (сек) | `2.0` |
-| `DELAY_BETWEEN_PRODUCTS` | Задержка между товарами (сек) | `1.5` |
-| `DEFAULT_MIN_RATING` | Минимальный рейтинг для фильтра | `4.5` |
-| `DEFAULT_MAX_PRICE` | Максимальная цена для фильтра | `10000` |
-| `DEFAULT_COUNTRY` | Страна для фильтра | `Россия` |
 
 ## Использование
 
